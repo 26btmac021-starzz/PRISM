@@ -1,0 +1,16 @@
+import type { HazardId, RiskCategory, SensorKey } from '../types';
+export const hazardNames: Record<HazardId, string> = { flash_flood: 'Flash Flood', landslide: 'Landslide', waterlogging: 'Waterlogging', soil_erosion: 'Soil Erosion', ground_motion: 'Ground Motion' };
+export const sensorNames: Record<SensorKey, string> = { rainfall: 'Rainfall intensity', soil_moisture: 'Soil moisture', water_level: 'Water level', ground_tilt: 'Ground tilt', vibration: 'Ground vibration', temperature: 'Temperature', humidity: 'Relative humidity' };
+export const sensorUnits: Record<SensorKey, string> = { rainfall: 'mm/h', soil_moisture: '%', water_level: 'm', ground_tilt: '°', vibration: 'index', temperature: '°C', humidity: '%' };
+export const sensorKeys = Object.keys(sensorNames) as SensorKey[];
+export const hazardKeys = Object.keys(hazardNames) as HazardId[];
+export const RISK_THRESHOLDS = Object.freeze({ normalMax: 30, watchMax: 50, warningMax: 75 }); // Prototype calibration point
+export const riskCategory = (score: number): RiskCategory => score <= RISK_THRESHOLDS.normalMax ? 'NORMAL' : score <= RISK_THRESHOLDS.watchMax ? 'WATCH' : score <= RISK_THRESHOLDS.warningMax ? 'WARNING' : 'CRITICAL';
+export const categoryClass = (category?: string | null) => !category ? 'unknown' : category === 'CRITICAL' ? 'critical' : category === 'WARNING' ? 'warning' : category === 'WATCH' ? 'watch' : 'normal';
+export const riskColor = (category?: string | null) => category === 'CRITICAL' ? '#ef6170' : category === 'WARNING' ? '#f7a44b' : category === 'WATCH' ? '#f0ca68' : '#40d2aa';
+export function fmtDate(time?: string | null, opts?: Intl.DateTimeFormatOptions) { if (!time) return '—'; const d = new Date(time); return isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, opts ?? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+export function fmtTime(time?: string | null) { return fmtDate(time, { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+export const fmtValue = (n: number | null | undefined, digits = 1) => n == null || !Number.isFinite(n) ? '—' : n.toFixed(digits);
+export const ago = (s: string | null | undefined) => { if (!s) return 'no data'; const delta = Math.max(0, Date.now() - new Date(s).getTime()); if (!Number.isFinite(delta)) return 'unknown'; if (delta < 60000) return `${Math.floor(delta / 1000)}s ago`; if (delta < 3600000) return `${Math.floor(delta / 60000)}m ago`; return `${Math.floor(delta / 3600000)}h ago`; };
+export const csv = (rows: Record<string, string | number | null | undefined>[], file: string) => { if (!rows.length) return; const fields = Object.keys(rows[0]); const encode = (v: unknown) => { const raw = String(v ?? ''); const safe = /^[=+@\-\t\r]/.test(raw) ? '\'' + raw : raw; return `"${safe.replace(/"/g, '""')}"`; }; const lines = [fields.map(encode).join(','), ...rows.map(row => fields.map(k => encode(row[k])).join(','))]; const blob = new Blob(['\ufeff', lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = file; a.click(); URL.revokeObjectURL(url); };
+export const readSetting = <T,>(key: string, fallback: T): T => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) as T : fallback; } catch { return fallback; } };
